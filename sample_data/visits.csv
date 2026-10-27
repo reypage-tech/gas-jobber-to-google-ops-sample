@@ -1,0 +1,6 @@
+Visit ID,Client ID,Date,Start Time,Duration (min),Assigned To,Status,Instructions
+V-5001,C-1001,2026-11-02,09:00,120,Team North,Scheduled,FICTIONAL DATA - kitchen and baths
+V-5002,C-1002,2026-11-02,13:00,90,Team South,Confirmed,FICTIONAL DATA
+V-5003,C-1003,2026-11-03,10:00,240,Team North,Cancelled,FICTIONAL DATA - client rescheduled
+V-5004,C-1001,2026-11-09,09:00,120,Team North,Draft,FICTIONAL DATA - not confirmed yet
+V-4001,C-1002,2026-01-15,13:00,90,Team South,Completed,FICTIONAL DATA - old visit

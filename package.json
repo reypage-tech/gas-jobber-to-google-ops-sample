@@ -1,0 +1,1 @@
+{ "name": "gas-jobber-to-google-ops-sample", "private": true, "scripts": { "test": "node --test test/ops.test.js" } }

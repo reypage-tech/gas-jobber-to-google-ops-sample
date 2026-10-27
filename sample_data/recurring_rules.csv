@@ -1,0 +1,4 @@
+RuleId,ClientId,Crew,Weekday,IntervalWeeks,WindowStart,WindowEnd,StartDate,EndDate,Instructions,Active
+R-01,C-1001,Team North,Mon,1,18:00,20:00,2026-11-01,,FICTIONAL DATA - after office hours,TRUE
+R-02,C-1002,Team South,Thu,2,07:00,08:30,2026-11-01,2026-12-31,FICTIONAL DATA - lobby and restrooms,TRUE
+R-03,C-1003,Team North,Fri,1,09:00,11:00,2026-11-01,,FICTIONAL DATA - paused contract,FALSE
