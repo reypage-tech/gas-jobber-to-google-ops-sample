@@ -10,10 +10,10 @@ function makeSheet(name) {
 }
 function load() {
   const sheets = {}, calendars = {}, folders = [], props = {};
-  let evSeq = 0;
+  let evSeq = 0; const mail = [];
   const makeCal = id => { const events = {}; return calendars[id] = { events,
     createEvent(title, s, e, o) { const id2 = 'ev' + (++evSeq); const ev = { id: id2, title, s, e, ...o,
-      getId: () => id2, setTitle(t) { ev.title = t; }, setTime(a, b) { ev.s = a; ev.e = b; },
+      getId: () => id2, setTitle(t) { ev.title = t; }, getTitle: () => ev.title, setTime(a, b) { ev.s = a; ev.e = b; },
       setLocation(l) { ev.location = l; }, setDescription(d) { ev.description = d; }, deleteEvent() { delete events[id2]; } };
       events[id2] = ev; return ev; },
     getEventById: id2 => events[id2] || null }; };
@@ -23,12 +23,13 @@ function load() {
     SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: n => sheets[n] || null, insertSheet: n => (sheets[n] = makeSheet(n)) }) },
     CalendarApp: { getCalendarById: id => calendars[id] || makeCal(id) },
     DriveApp: { getFolderById: () => root },
-    PropertiesService: { getScriptProperties: () => ({ getProperty: k => props[k] || 'root' }) },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: k => (k in props ? props[k] : (k.endsWith('FOLDER_ID') ? 'root' : null)) }) },
+    MailApp: { sendEmail: (...a) => mail.push(a) },
     Utilities: { parseCsv }, Date, JSON, console };
   vm.createContext(ctx);
   const dir = path.join(__dirname, '..', 'src');
-  for (const f of ['Config.gs', 'Sheets.gs', 'Import.gs', 'Drive.gs', 'Calendar.gs', 'Recurring.gs', 'Review.gs', 'Menu.gs'])
+  for (const f of ['Config.gs', 'Sheets.gs', 'Import.gs', 'Drive.gs', 'Calendar.gs', 'Recurring.gs', 'Review.gs', 'Completion.gs', 'Menu.gs'])
     vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), ctx, { filename: f });
-  return { ctx, sheets, calendars, folders };
+  return { ctx, sheets, calendars, folders, props, mail };
 }
 module.exports = { load, data: f => fs.readFileSync(path.join(__dirname, '..', 'sample_data', f), 'utf8') };

@@ -9,6 +9,7 @@ A commercial cleaning company is leaving Jobber. It already has Jobber exports a
 - one client master list and one visit list they can edit,
 - recurring cleaning schedules turned into calendar events with location, crew, service window and a link to the client folder, readable on a phone,
 - a check of the old records before go-live: outdated clients, duplicates, and a tracker showing how far each data area has moved,
+- a simple way for crews to confirm a visit was done and report issues or low supplies,
 - client folders in Drive with permissions that keep finance records and entry instructions away from crews.
 
 ## How it fits together
@@ -35,6 +36,12 @@ flowchart LR
   C --> T
   V --> T
   T --> M[(MigrationTracker)]
+  GF[Google Form<br/>crew completion report] --> OF[onFormSubmit]
+  OF --> CR[(CompletionReports)]
+  OF -->|Status = Completed| V
+  OF --> FU[(FollowUps)]
+  CR --> SUM[Office summary]
+  FU --> SUM
 ```
 
 | Sheet | Columns | Who edits it |
@@ -45,6 +52,8 @@ flowchart LR
 | Crew | Crew, CalendarId | Owner, once |
 | ReviewQueue | Key, Area, RecordId, Issue, Detail, Found, Resolved | Script adds rows, office ticks Resolved |
 | MigrationTracker | Area, Imported, Flagged, Verified, Status, Updated | Script, office types Verified |
+| CompletionReports | Timestamp, VisitId, Crew, Completed, Issues, SuppliesLow, Notes, Result | Script only (from the Form) |
+| FollowUps | Created, VisitId, ClientId, Crew, Type, Detail, Status | Script adds rows, office closes them |
 | SyncLog | Time, Action, Id, Detail | Script only |
 
 ## What the script does
@@ -54,10 +63,17 @@ flowchart LR
 - **Calendar sync.** `Scheduled` and `Confirmed` visits become events on the crew's calendar with client name, address, service window, instructions and the folder link. Event id and calendar id are stored in the row, so:
   - a time change updates the same event,
   - a crew change removes the event from the old crew calendar and creates it on the new one (no duplicate),
-  - any other status (`Cancelled`, `Draft`, `On hold`, `Completed`) removes the event.
+  - `Completed` keeps the event on the crew calendar as history, with the title prefixed `[Done] ` once (never doubled). A later crew change on a completed visit does not move it,
+  - any other status (`Cancelled`, `Draft`, `On hold`) removes the event.
   Crews see their schedule in the Google Calendar app on their phones by subscribing to their crew calendar.
 - **Record check.** `flagRecords` adds to ReviewQueue: clients with no visit in the last 6 months (setting in `Config.gs`), and likely duplicates by normalized name or normalized address (case, punctuation, "LLC", "St/Street" and similar are ignored). Rows are keyed, so Resolved ticks survive the next run.
 - **Migration tracker.** `updateMigrationTracker` keeps one row per area (Clients, Visits, RecurringRules, ClientFolders): how many are imported, how many open flags, how many the office has verified, and a status (`Not started`, `Needs review`, `Verifying`, `Done`).
+- **Completion reporting.** Crews fill a short Google Form on their phone after each visit: Visit ID, crew, completed (Yes/No), issues, supplies running low, notes. `onFormSubmit`:
+  - always writes the answer to CompletionReports with a Result, so no report is lost,
+  - checks the Visit ID exists in Jobs; if not, nothing is changed and a "Check report" follow-up is raised,
+  - on Yes, sets the visit to `Completed`; the next sync keeps its calendar event as history and adds the `[Done] ` prefix to the title. A second report for the same visit is recorded as "Already completed",
+  - turns a No, any issue, any low supply and a crew that does not match the schedule into rows in FollowUps for the office.
+  `buildCompletionSummary` gives the office a short text for a date (reports, completed, not completed, unknown ids, open follow-ups with details). It shows from the Ops menu, and `emailTodaySummary` can email it if an address is set in Script properties.
 - **Client folders.** Creates `Client Name (ClientId)` under one root folder, reuses an existing folder of that name, and writes the link back.
 - **Menu and trigger.** An `Ops` menu runs each step. `installHourlySync` adds an hourly "create visits and sync" trigger.
 
@@ -83,9 +99,10 @@ Sharing is done with Google Groups per crew (for example one group per crew), so
 3. Fill the `Crew` sheet with each crew name and its Google Calendar id.
 4. Put `clients.csv` and `visits.csv` from Jobber in the import folder. The column names the script expects are in `src/Import.gs` (`CLIENT_MAP`, `VISIT_MAP`) and are easy to change to match your export.
 5. Add recurring rules (see `sample_data/recurring_rules.csv` for the format).
-6. Reload the Sheet and use the Ops menu. Approve permissions on first run.
+6. Create a Google Form with the questions Visit ID, Crew, Completed, Issues, Supplies low, Notes (titles must match), link it to this Sheet, and run `installFormTrigger` once. Optional: set `OFFICE_SUMMARY_EMAIL` in Script properties to receive the summary by email.
+7. Reload the Sheet and use the Ops menu. Approve permissions on first run.
 
-Local tests: `npm test` (Node 18 or newer, no install needed). 15 tests.
+Local tests: `npm test` (Node 18 or newer, no install needed). 23 tests.
 
 ## Suggested first paid milestone
 
@@ -93,15 +110,15 @@ A paid review of your existing records with a clear plan: import the Jobber expo
 
 ## Not in this sample
 
-- Completion reporting form (visit done, issues, supply needs)
 - QuickBooks Online and Gusto connections, rate and billing reconciliation
 - Setting Drive permissions by code (the table above is a design to apply by hand or in a later step)
 - Doc templates for scopes and checklists
+- Photo upload in the completion form, and a scheduled trigger for the summary email
 - Two-way sync (edits made in Calendar are not written back)
 - Direct Jobber API connection (CSV export is used)
 
 ## Honest note
 
-All data in `sample_data/` is fictional. The code was checked only locally, with stand-in versions of SpreadsheetApp, CalendarApp, DriveApp and PropertiesService (`test/mocks.js`). It has not been run in a live Google account yet. The Jobber export column names are assumed and must be checked against your own export. I have not used Jobber hands-on; this sample works from its CSV exports.
+All data in `sample_data/` is fictional. The code was checked only locally, with stand-in versions of SpreadsheetApp, CalendarApp, DriveApp, PropertiesService and MailApp, and Form submits simulated from `sample_data/completion_form_responses.csv` (`test/mocks.js`). It has not been run in a live Google account yet. The Jobber export column names are assumed and must be checked against your own export. I have not used Jobber hands-on; this sample works from its CSV exports.
 
 Background: about 3.5 years building Google Apps Script tools at a company in a Prime-listed group in Japan, including a system used by about 2,700 people.

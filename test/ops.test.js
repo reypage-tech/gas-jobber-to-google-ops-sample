@@ -172,3 +172,105 @@ test('migration tracker counts imported, open flags and verified, keeps typed va
   assert.strictEqual(t.Visits.status, 'Done');
   assert.strictEqual(tr.find(x => x[0] === 'Visits')[col(env, 'MigrationTracker', 'Verified')], 5);
 });
+
+// 3. completion reporting
+function submissions() {
+  const lines = data('completion_form_responses.csv').trim().split('\n');
+  const head = lines[0].split(',');
+  return lines.slice(1).map(l => { const v = l.split(','); const nv = {}; head.forEach((h, i) => { nv[h] = [v[i]]; }); return { namedValues: nv }; });
+}
+test('form submit marks the visit completed and logs low supplies as a follow-up', () => {
+  const env = setup();
+  assert.strictEqual(env.ctx.onFormSubmit(submissions()[0]), 'Marked completed');
+  const job = env.sheets.Jobs.rows.find(x => x[0] === 'V-5001');
+  assert.strictEqual(job[col(env, 'Jobs', 'Status')], 'Completed');
+  const f = env.sheets.FollowUps.rows.slice(1);
+  assert.strictEqual(f.length, 1);
+  assert.deepStrictEqual([f[0][4], f[0][5], f[0][6]], ['Supplies', 'Glass cleaner', 'Open']);
+  assert.strictEqual(env.sheets.CompletionReports.rows[1][7], 'Marked completed');
+});
+
+test('completed visit stays on the calendar as history with a single [Done] prefix', () => {
+  const env = setup();
+  env.ctx.syncJobsToCalendar();
+  env.ctx.onFormSubmit(submissions()[0]);
+  const r = env.ctx.syncJobsToCalendar();
+  assert.strictEqual(r.deleted, 0); assert.strictEqual(r.done, 1);
+  const evs = Object.values(env.calendars.CALENDAR_ID_TEAM_NORTH.events);
+  assert.strictEqual(evs.length, 1);
+  assert.strictEqual(evs[0].title, '[Done] Sample Client A (fictional) | V-5001');
+  const r2 = env.ctx.syncJobsToCalendar();
+  assert.strictEqual(r2.done, 0);
+  assert.strictEqual(evs[0].title, '[Done] Sample Client A (fictional) | V-5001');
+});
+
+test('crew change on a completed visit leaves the event where it is', () => {
+  const env = setup();
+  env.ctx.syncJobsToCalendar();
+  env.ctx.onFormSubmit(submissions()[0]);
+  env.ctx.syncJobsToCalendar();
+  const job = env.sheets.Jobs.rows.find(x => x[0] === 'V-5001');
+  job[col(env, 'Jobs', 'Crew')] = 'Team South';
+  const r = env.ctx.syncJobsToCalendar();
+  assert.strictEqual(r.moved, 0); assert.strictEqual(r.created, 0);
+  assert.strictEqual(Object.keys(env.calendars.CALENDAR_ID_TEAM_NORTH.events).length, 1);
+  assert.strictEqual(Object.keys(env.calendars.CALENDAR_ID_TEAM_SOUTH.events).length, 1);
+  assert.strictEqual(job[col(env, 'Jobs', 'CalendarId')], 'CALENDAR_ID_TEAM_NORTH');
+});
+
+test('cancelled and draft still delete their events', () => {
+  const env = setup();
+  env.ctx.syncJobsToCalendar();
+  const jobs = env.sheets.Jobs.rows, s = col(env, 'Jobs', 'Status');
+  jobs[1][s] = 'Cancelled'; jobs[2][s] = 'Draft';
+  const r = env.ctx.syncJobsToCalendar();
+  assert.strictEqual(r.deleted, 2);
+  assert.strictEqual(Object.keys(env.calendars.CALENDAR_ID_TEAM_NORTH.events).length, 0);
+  assert.strictEqual(Object.keys(env.calendars.CALENDAR_ID_TEAM_SOUTH.events).length, 0);
+});
+
+test('not completed keeps status and raises not-completed and issue follow-ups', () => {
+  const env = setup();
+  assert.strictEqual(env.ctx.onFormSubmit(submissions()[1]), 'Not completed');
+  const job = env.sheets.Jobs.rows.find(x => x[0] === 'V-5002');
+  assert.strictEqual(job[col(env, 'Jobs', 'Status')], 'Confirmed');
+  const types = env.sheets.FollowUps.rows.slice(1).map(x => x[4]);
+  assert.deepStrictEqual(types, ['Not completed', 'Issue']);
+});
+
+test('unknown visit id is recorded, not applied, and flagged for checking', () => {
+  const env = setup();
+  const before = JSON.stringify(env.sheets.Jobs.rows);
+  assert.strictEqual(env.ctx.onFormSubmit(submissions()[2]), 'Unknown VisitId');
+  assert.strictEqual(JSON.stringify(env.sheets.Jobs.rows), before);
+  assert.strictEqual(env.sheets.FollowUps.rows[1][4], 'Check report');
+  assert.strictEqual(env.sheets.CompletionReports.rows.length, 2);
+});
+
+test('repeat submit and crew mismatch are handled', () => {
+  const env = setup();
+  const s = submissions()[0];
+  env.ctx.onFormSubmit(s);
+  s.namedValues.Crew = ['Team South'];
+  s.namedValues['Supplies low'] = [''];
+  assert.strictEqual(env.ctx.onFormSubmit(s), 'Already completed');
+  const types = env.sheets.FollowUps.rows.slice(1).map(x => x[4]);
+  assert.deepStrictEqual(types, ['Supplies', 'Crew mismatch']);
+});
+
+test('office summary counts the day and lists open follow-ups; email only if set', () => {
+  const env = setup();
+  submissions().forEach(s => env.ctx.onFormSubmit(s));
+  const text = env.ctx.buildCompletionSummary('2026-11-02');
+  assert.match(text, /Reports: 3/);
+  assert.match(text, /Completed: 1/);
+  assert.match(text, /Not completed: 1/);
+  assert.match(text, /Unknown visit ids: 1/);
+  assert.match(text, /Open follow-ups: 4/);
+  assert.match(text, /- Issue \| V-5002 \| Front door locked/);
+  assert.strictEqual(env.ctx.emailTodaySummary(), false);
+  assert.strictEqual(env.mail.length, 0);
+  env.props.OFFICE_SUMMARY_EMAIL = 'office-placeholder';
+  assert.strictEqual(env.ctx.emailTodaySummary(), true);
+  assert.strictEqual(env.mail.length, 1);
+});

@@ -3,7 +3,8 @@
  * EventId and CalendarId columns remember where the event lives, so:
  *  - edits update the same event,
  *  - a crew change removes the event from the old crew calendar before creating it on the new one,
- *  - any status that is not synced (Cancelled, Draft, On hold...) removes the event.
+ *  - Completed keeps the event as history, titled '[Done] ...', and is not moved on a crew change,
+ *  - any other status that is not synced (Cancelled, Draft, On hold...) removes the event.
  */
 function toStartDate_(dateVal, startVal) {
   var d = dateVal instanceof Date ? dateVal : new Date(String(dateVal) + 'T00:00:00');
@@ -24,6 +25,19 @@ function removeEvent_(sh, j) {
   return removed;
 }
 
+var DONE_PREFIX = '[Done] ';
+
+/** Completed visit: keep its event where it is, add the prefix once. Returns true if the title changed. */
+function markDone_(j) {
+  if (!j.EventId || !j.CalendarId) return false;
+  var ev = CalendarApp.getCalendarById(j.CalendarId).getEventById(j.EventId);
+  if (!ev) return false;
+  var title = ev.getTitle();
+  if (title.indexOf(DONE_PREFIX) === 0) return false;
+  ev.setTitle(DONE_PREFIX + title);
+  return true;
+}
+
 function syncJobsToCalendar() {
   var crewMap = {};
   readTable_(getSheet_(CONFIG.SHEETS.CREW, CONFIG.CREW_HEADERS)).forEach(function (r) { crewMap[r.Crew] = r.CalendarId; });
@@ -31,10 +45,14 @@ function syncJobsToCalendar() {
   readTable_(getSheet_(CONFIG.SHEETS.CLIENTS, CONFIG.CLIENT_HEADERS)).forEach(function (c) { clients[c.ClientId] = c; });
   var sh = getSheet_(CONFIG.SHEETS.JOBS, CONFIG.JOB_HEADERS);
   var H = CONFIG.JOB_HEADERS;
-  var res = { created: 0, updated: 0, moved: 0, deleted: 0, skipped: 0, errors: [] };
+  var res = { created: 0, updated: 0, moved: 0, done: 0, deleted: 0, skipped: 0, errors: [] };
 
   readTable_(sh).forEach(function (j) {
     try {
+      if (j.Status === CONFIG.COMPLETED_STATUS) {
+        if (markDone_(j)) res.done++; else res.skipped++;
+        return;
+      }
       if (CONFIG.ACTIVE_STATUSES.indexOf(j.Status) < 0) {
         if (j.EventId) { if (removeEvent_(sh, j)) res.deleted++; }
         else res.skipped++;

@@ -1,0 +1,4 @@
+Timestamp,Visit ID,Crew,Completed,Issues,Supplies low,Notes
+2026-11-02 11:05,V-5001,Team North,Yes,,Glass cleaner,FICTIONAL DATA
+2026-11-02 14:40,V-5002,Team South,No,Front door locked,,FICTIONAL DATA - could not enter
+2026-11-02 15:10,V-9999,Team South,Yes,,,FICTIONAL DATA - wrong id typed
