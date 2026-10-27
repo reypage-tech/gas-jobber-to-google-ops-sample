@@ -2,6 +2,27 @@
 
 A small Google Apps Script setup that moves scheduling and client records out of Jobber and into Google Sheets, Google Calendar and Google Drive, built so the office team can keep it running after handover.
 
+## At a glance
+
+- **Who it is for:** a service business leaving Jobber that wants its clients, visits and crew schedules in Google Sheets, Calendar and Drive.
+- **What you get:** CSV import without duplicates, recurring visits, crew calendars, a pre-go-live record check, a migration tracker, a crew completion form and client folders.
+- **Status:** fictional data, checked with local tests only (`npm test`, 23 tests). Not yet run in a real Apps Script project.
+
+## Files
+
+| File | What it holds |
+|---|---|
+| `src/Config.gs` | Sheet names, settings (look-ahead days, inactive months) |
+| `src/Import.gs` | Jobber CSV import and column maps |
+| `src/Recurring.gs` | Visits from recurring rules |
+| `src/Calendar.gs` | Calendar sync per crew |
+| `src/Review.gs` | Record check and migration tracker |
+| `src/Completion.gs` | Form handling, follow-ups, office summary |
+| `src/Drive.gs` | Client folders |
+| `src/Menu.gs`, `src/Sheets.gs` | Ops menu, triggers, sheet helpers |
+| `test/` | Local stand-ins for Google services and the tests |
+| `sample_data/` | Fictional CSV files |
+
 ## Problem
 
 A commercial cleaning company is leaving Jobber. It already has Jobber exports and a migration spreadsheet. The office needs:
@@ -119,6 +140,6 @@ A paid review of your existing records with a clear plan: import the Jobber expo
 
 ## Honest note
 
-All data in `sample_data/` is fictional. The code was checked only locally, with stand-in versions of SpreadsheetApp, CalendarApp, DriveApp, PropertiesService and MailApp, and Form submits simulated from `sample_data/completion_form_responses.csv` (`test/mocks.js`). It has not been run in a live Google account yet. The Jobber export column names are assumed and must be checked against your own export. I have not used Jobber hands-on; this sample works from its CSV exports.
+All data in `sample_data/` is fictional. The code was checked only locally, with stand-in versions of SpreadsheetApp, CalendarApp, DriveApp, PropertiesService and MailApp, and Form submits simulated from `sample_data/completion_form_responses.csv` (`test/mocks.js`). Not yet run in a real Apps Script project. The Jobber export column names are assumed and must be checked against your own export. I have not used Jobber hands-on; this sample works from its CSV exports.
 
 Background: about 3.5 years building Google Apps Script tools at a company in a Prime-listed group in Japan, including a system used by about 2,700 people.
