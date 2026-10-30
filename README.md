@@ -1,12 +1,17 @@
 # Jobber to Google Workspace: ops sample for a commercial cleaning company
 
-A small Google Apps Script setup that moves scheduling and client records out of Jobber and into Google Sheets, Google Calendar and Google Drive, built so the office team can keep it running after handover.
+For a cleaning or field-service company leaving Jobber for Google Sheets, Calendar and Drive.
+
+Moves a cleaning company's clients, visits and crew schedules from Jobber exports into Sheets, Calendar and Drive without duplicates.
+
+![Local mock test output with fictional data. Not a real Google account screen.](docs/local_test_output.png)
+
+The image above is the real output of `node test/demo_output.js` run through `docs/render_local_test_output.py` on the mocks in `test/mocks.js`: 4 clients, 11 jobs, 8 crew-calendar events, 6 review-queue flags, 3 completion reports and 4 follow-ups, all from the fictional data in `sample_data/`. It is not a real Google account screen.
 
 ## At a glance
 
-- **Who it is for:** a service business leaving Jobber that wants its clients, visits and crew schedules in Google Sheets, Calendar and Drive.
 - **What you get:** CSV import without duplicates, recurring visits, crew calendars, a pre-go-live record check, a migration tracker, a crew completion form and client folders.
-- **Status:** fictional data, checked with local tests only (`npm test`, 23 tests). Not yet run in a real Apps Script project.
+- **Status:** fictional data, checked with local tests only (`npm test`, 23 tests, and `node test/demo_output.js` for the full mock run above). Not yet run in a real Apps Script project.
 
 ## Files
 
@@ -20,7 +25,9 @@ A small Google Apps Script setup that moves scheduling and client records out of
 | `src/Completion.gs` | Form handling, follow-ups, office summary |
 | `src/Drive.gs` | Client folders |
 | `src/Menu.gs`, `src/Sheets.gs` | Ops menu, triggers, sheet helpers |
-| `test/` | Local stand-ins for Google services and the tests |
+| `test/mocks.js`, `test/ops.test.js` | Local stand-ins for Google services and the 23 tests |
+| `test/demo_output.js` | Runs the same mock flow once and prints the resulting sheet rows, calendar events and office summary as plain tables |
+| `docs/render_local_test_output.py` | Renders `test/demo_output.js` output into `docs/local_test_output.png` |
 | `sample_data/` | Fictional CSV files |
 
 ## Problem
@@ -123,7 +130,7 @@ Sharing is done with Google Groups per crew (for example one group per crew), so
 6. Create a Google Form with the questions Visit ID, Crew, Completed, Issues, Supplies low, Notes (titles must match), link it to this Sheet, and run `installFormTrigger` once. Optional: set `OFFICE_SUMMARY_EMAIL` in Script properties to receive the summary by email.
 7. Reload the Sheet and use the Ops menu. Approve permissions on first run.
 
-Local tests: `npm test` (Node 18 or newer, no install needed). 23 tests.
+Local tests: `npm test` (Node 18 or newer, no install needed). 23 tests. `node test/demo_output.js` runs the same mocks once end to end and prints the plain-text tables behind the image at the top; `python3 docs/render_local_test_output.py` regenerates that image from a fresh run.
 
 ## Suggested first paid milestone
 
