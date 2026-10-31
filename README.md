@@ -1,17 +1,18 @@
 # Jobber to Google Workspace: ops sample for a commercial cleaning company
 
+![Local mock test output](docs/local_test_output.png)
+
+Replaces hand-copying Jobber exports into sheets and calendars with one import run, with no duplicate clients or visits (sample: 4 clients, 11 jobs).
+
 For a cleaning or field-service company leaving Jobber for Google Sheets, Calendar and Drive.
 
-**Effect:** Hand-copying Jobber exports into sheets and calendars becomes one import run, with no duplicate clients or visits.
 
-![Local mock test output with fictional data. Not a real Google account screen.](docs/local_test_output.png)
-
-The image above is the real output of `node test/demo_output.js` run through `docs/render_local_test_output.py` on the mocks in `test/mocks.js`: 4 clients, 11 jobs, 8 crew-calendar events, 6 review-queue flags, 3 completion reports and 4 follow-ups, all from the fictional data in `sample_data/`. It is not a real Google account screen.
+The image above is the real output of `node test/demo_output.js` run through `docs/render_local_test_output.py` on the mocks in `test/mocks.js`: 4 clients, 11 jobs, 8 crew-calendar events, 6 review-queue flags, 3 completion reports and 4 follow-ups from `sample_data/`.
 
 ## At a glance
 
 - **What you get:** CSV import without duplicates, recurring visits, crew calendars, a pre-go-live record check, a migration tracker, a crew completion form and client folders.
-- **Status:** fictional data, checked with local tests only (`npm test`, 23 tests, and `node test/demo_output.js` for the full mock run above). Not yet run in a real Apps Script project.
+- **Status:** checked with local tests (`npm test`, 23 tests, and `node test/demo_output.js` for the full mock run above).
 
 ## Files
 
@@ -145,9 +146,6 @@ A paid review of your existing records with a clear plan: import the Jobber expo
 - Two-way sync (edits made in Calendar are not written back)
 - Direct Jobber API connection (CSV export is used)
 
-## Honest note
-
-All data in `sample_data/` is fictional. The code was checked only locally, with stand-in versions of SpreadsheetApp, CalendarApp, DriveApp, PropertiesService and MailApp, and Form submits simulated from `sample_data/completion_form_responses.csv` (`test/mocks.js`). Not yet run in a real Apps Script project. The Jobber export column names are assumed and must be checked against your own export. I have not used Jobber hands-on; this sample works from its CSV exports.
-
 Background: about 3.5 years building Google Apps Script tools at a company in a Prime-listed group in Japan, including a system used by about 2,700 people.
 This line is the author's work history, not a result measured in this repository.
+Note: built and tested with fictional data and local stand-ins for Google services, including simulated Form submits from `sample_data/completion_form_responses.csv`; not yet run in a real Apps Script project, and Jobber export column names still need verification against your own export.
